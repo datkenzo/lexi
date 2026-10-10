@@ -83,6 +83,17 @@ describe('Lexi', () => {
     expect(await screen.findByRole('button', { name: 'calms' })).toBeTruthy()
   })
 
+  it('shows the dictionary example sentences and copies one into My sentence', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+    await user.type(await screen.findByLabelText('Look up an English word'), 'calm')
+    await user.click(screen.getByRole('button', { name: 'Look up' }))
+    await screen.findByRole('heading', { name: 'calm' })
+    await user.click(screen.getByRole('button', { name: 'Example sentences' }))
+    await user.click(await screen.findByRole('button', { name: 'Use as draft' }))
+    expect(screen.getByLabelText('My sentence').value).toBe('Stay calm.')
+  })
+
   it('counts a word once, resets it to Not learned on re-lookup, and runs a review', async () => {
     const user = userEvent.setup()
     render(<App />)

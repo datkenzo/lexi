@@ -777,6 +777,14 @@ textarea::placeholder {
   gap: var(--s1);
 }
 
+.examples {
+  list-style: none;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s2);
+}
+
 .source-note {
   margin-top: var(--s4);
   font-size: 13px;

@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react'
-import { suggestSentence } from '../lib/ai.js'
 import { canSpeak, speak } from '../lib/speak.js'
 import { STATUS } from '../lib/words.js'
 import Icon from './Icon.jsx'
@@ -22,12 +21,12 @@ const SOURCE_NAMES = {
 export default function WordCard({ record, notice, onSaveSentence, onRemove }) {
   const [showAll, setShowAll] = useState(false)
   const [draft, setDraft] = useState(record.my_sentence ?? '')
-  const [ai, setAi] = useState({ state: 'idle', text: '' })
+  const [showExamples, setShowExamples] = useState(false)
 
   useEffect(() => {
     setDraft(record.my_sentence ?? '')
     setShowAll(false)
-    setAi({ state: 'idle', text: '' })
+    setShowExamples(false)
   }, [record.word])
 
   const meanings = record.meanings ?? []
@@ -35,16 +34,8 @@ export default function WordCard({ record, notice, onSaveSentence, onRemove }) {
   const savedSentence = (record.my_sentence ?? '').trim()
   const changed = draft.trim() !== savedSentence
 
-  const askAi = async () => {
-    setAi({ state: 'loading', text: '' })
-    try {
-      const first = meanings[0] ?? {}
-      const text = await suggestSentence({ word: record.word, pos: first.pos, definition: first.definition })
-      setAi({ state: 'done', text })
-    } catch {
-      setAi({ state: 'error', text: '' })
-    }
-  }
+  // Example sentences that come with the dictionary entry.
+  const examples = [...new Set(meanings.map((m) => m.example).filter(Boolean))].slice(0, 4)
 
   const confirmRemove = () => {
     if (window.confirm(`Remove “${record.word}” from your history?`)) onRemove(record.word)
@@ -113,24 +104,35 @@ export default function WordCard({ record, notice, onSaveSentence, onRemove }) {
             >
               Save sentence
             </button>
-            <button type="button" className="btn btn-small" onClick={askAi} disabled={ai.state === 'loading'}>
-              <Icon name="sparkle" size={18} />
-              {ai.state === 'loading' ? 'Thinking...' : 'Suggest a sentence'}
+            <button
+              type="button"
+              className="btn btn-small"
+              aria-expanded={showExamples}
+              onClick={() => setShowExamples((v) => !v)}
+            >
+              <Icon name="book" size={18} />
+              {showExamples ? 'Hide examples' : 'Example sentences'}
             </button>
             {!changed && savedSentence && <span className="saved-note">Saved</span>}
           </div>
 
-          {ai.state === 'done' && (
-            <div className="suggestion">
-              <p>{ai.text}</p>
-              <button type="button" className="link" onClick={() => setDraft(ai.text)}>
-                Use as draft
-              </button>
-            </div>
-          )}
-          {ai.state === 'error' && (
-            <p className="muted small">AI suggestions are not available yet. See the README to turn them on.</p>
-          )}
+          {showExamples &&
+            (examples.length > 0 ? (
+              <ul className="examples">
+                {examples.map((ex) => (
+                  <li key={ex} className="suggestion">
+                    <p>“{ex}”</p>
+                    <button type="button" className="link" onClick={() => setDraft(ex)}>
+                      Use as draft
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="muted small">
+                This word has no example sentences in the dictionary. Try writing your own above.
+              </p>
+            ))}
         </div>
 
         {record.source && SOURCE_NAMES[record.source] && (

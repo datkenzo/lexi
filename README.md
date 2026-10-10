@@ -24,16 +24,6 @@ Other commands:
 2. Open the Vercel address in **Safari** on your iPhone.
 3. Tap Share, then **Add to Home Screen**. Lexi opens full screen like an app.
 
-## Turn on AI sentence suggestions (optional)
-
-The "Suggest a sentence" button calls `api/sentence.js`, a small Vercel function that keeps your API key off the phone.
-
-1. In Vercel, open your project, then Settings, then Environment Variables.
-2. Add `ANTHROPIC_API_KEY` with your key from the Anthropic Console. Redeploy.
-3. Optional: set `ANTHROPIC_MODEL` to use a different model. The default is `claude-haiku-4-5-20251001`.
-
-`npm run dev` does not run the function. To test it on your computer, use `npx vercel dev` instead. Without the key, everything else still works.
-
 ## How it behaves
 
 - **Looking up a word saves it.** Each word is stored once with a status: Learned or Not learned.
@@ -41,6 +31,7 @@ The "Suggest a sentence" button calls `api/sentence.js`, a small Vercel function
 - **Review** lets you pick all Not learned words or all words, and a time range: today, this week (from Monday), this month, or custom dates. Time ranges use the date you last looked the word up.
 - **Learned words** are skipped in "Not learned" mode. They come back only when you look them up again.
 - **Home screen** shows Total words and Not learned.
+- **Example sentences:** the button shows the example sentences that come with the dictionary entry. Tap Use as draft to copy one into My sentence, then edit it.
 - **Offline:** saved words and review keep working. New words need internet.
 - **Look:** bright, playful style inspired by Duolingo's UI, light theme only.
 - **Pronunciation:** plays the dictionary recording, or the phone reads the word aloud when there is none.
@@ -56,4 +47,3 @@ Words are stored on the device (IndexedDB). There is no login and no sync in ver
 - `src/lib/db.js`: IndexedDB storage.
 - `src/components/`: Search, History and Review screens.
 - `src/styles.css`: colors, fonts and spacing from the project brief. Change the `:root` values to restyle the app.
-- `api/sentence.js`: the AI sentence function.
