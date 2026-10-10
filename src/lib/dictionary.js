@@ -1,7 +1,10 @@
 // Free Dictionary API (no key): https://dictionaryapi.dev
 // Datamuse is used only to suggest spellings when a word is not found.
 
-const DICTIONARY_URL = 'https://api.dictionaryapi.dev/api/v2/entries/en/'
+// First try our own domain (Vercel / Vite forwards it), which avoids cross-site
+// problems in the browser. If that does not work, call the dictionary directly.
+const DICTIONARY_URLS = ['/dictionary/', 'https://api.dictionaryapi.dev/api/v2/entries/en/']
+const ATTEMPT_TIMEOUT_MS = 8000
 const SUGGEST_URL = 'https://api.datamuse.com/sug?max=5&s='
 
 export class LookupError extends Error {
@@ -40,22 +43,46 @@ export function normalizeEntry(word, data) {
   return { word, phonetic, audio, partOfSpeech, meanings: meanings.slice(0, 12) }
 }
 
-export async function fetchEntry(word) {
-  let res
+const isJson = (res) => (res.headers.get('content-type') || '').includes('json')
+
+async function attempt(url) {
   const ctrl = new AbortController()
-  const timer = setTimeout(() => ctrl.abort(), 12000)
+  const timer = setTimeout(() => ctrl.abort(), ATTEMPT_TIMEOUT_MS)
   try {
-    res = await fetch(DICTIONARY_URL + encodeURIComponent(word), { signal: ctrl.signal })
-  } catch (err) {
-    // A failed request is only "offline" when the device says so. Otherwise the
-    // dictionary could not be reached (blocked, timeout, DNS, server down).
-    const offline = typeof navigator !== 'undefined' && navigator.onLine === false
-    const detail = err?.name === 'AbortError' ? 'Timed out after 12 seconds' : `${err?.name ?? 'Error'}: ${err?.message ?? ''}`
-    throw offline
-      ? new LookupError('offline', 'No internet connection.', detail)
-      : new LookupError('unreachable', 'Could not reach the dictionary.', detail)
+    return await fetch(url, { signal: ctrl.signal })
   } finally {
     clearTimeout(timer)
+  }
+}
+
+export async function fetchEntry(word) {
+  let res = null
+  let lastDetail = ''
+  for (const base of DICTIONARY_URLS) {
+    try {
+      const r = await attempt(base + encodeURIComponent(word))
+      // A page that is not JSON means this route does not exist here: try the next one.
+      if (!isJson(r) && r.status !== 200) {
+        lastDetail = `HTTP ${r.status} from ${base}`
+        continue
+      }
+      res = r
+      break
+    } catch (err) {
+      lastDetail =
+        err?.name === 'AbortError'
+          ? `Timed out after ${ATTEMPT_TIMEOUT_MS / 1000} seconds`
+          : `${err?.name ?? 'Error'}: ${err?.message ?? ''}`
+    }
+  }
+
+  if (!res) {
+    // Only "offline" when the device says so. Otherwise the dictionary could not be
+    // reached (blocked, timeout, DNS, server down).
+    const offline = typeof navigator !== 'undefined' && navigator.onLine === false
+    throw offline
+      ? new LookupError('offline', 'No internet connection.', lastDetail)
+      : new LookupError('unreachable', 'Could not reach the dictionary.', lastDetail)
   }
   if (res.status === 404) throw new LookupError('notfound', 'No definitions found.')
   if (!res.ok) throw new LookupError('error', 'The dictionary is not responding.', `HTTP ${res.status}`)

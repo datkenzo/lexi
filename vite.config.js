@@ -3,6 +3,16 @@ import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 
 export default defineConfig({
+  server: {
+    // Same-origin route to the dictionary while developing (production: vercel.json).
+    proxy: {
+      '/dictionary': {
+        target: 'https://api.dictionaryapi.dev',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/dictionary/, '/api/v2/entries/en'),
+      },
+    },
+  },
   plugins: [
     react(),
     VitePWA({
@@ -25,7 +35,7 @@ export default defineConfig({
       },
       workbox: {
         navigateFallback: '/index.html',
-        navigateFallbackDenylist: [/^\/api\//],
+        navigateFallbackDenylist: [/^\/api\//, /^\/dictionary\//],
       },
     }),
   ],

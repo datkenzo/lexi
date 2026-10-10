@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import App from '../src/App.jsx'
+import { deleteWord, getAll } from '../src/lib/db.js'
 
 const calm = [
   {
@@ -20,8 +21,9 @@ const calm = [
 
 function fakeFetch(url) {
   const u = String(url)
-  if (u.includes('/entries/en/calm')) return Promise.resolve(new Response(JSON.stringify(calm)))
-  if (u.includes('/entries/en/')) return Promise.resolve(new Response('{}', { status: 404 }))
+  const json = { headers: { 'content-type': 'application/json' } }
+  if (u.includes('/dictionary/calm')) return Promise.resolve(new Response(JSON.stringify(calm), json))
+  if (u.includes('/dictionary/')) return Promise.resolve(new Response('{}', { status: 404, ...json }))
   if (u.includes('datamuse')) return Promise.resolve(new Response(JSON.stringify([{ word: 'calms' }])))
   return Promise.resolve(new Response('{}', { status: 500 }))
 }
@@ -29,7 +31,9 @@ function fakeFetch(url) {
 const stat = (label) =>
   within(screen.getByLabelText('Your progress')).getByText(label).parentElement
 
-beforeEach(() => {
+beforeEach(async () => {
+  // Empty the word list so every test starts fresh.
+  for (const w of await getAll()) await deleteWord(w.word)
   vi.stubGlobal('fetch', vi.fn(fakeFetch))
 })
 
@@ -39,6 +43,22 @@ afterEach(() => {
 })
 
 describe('Lexi', () => {
+  it('falls back to the direct dictionary address when our own route does not exist', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((url) =>
+        String(url).startsWith('/dictionary/')
+          ? Promise.resolve(new Response('<html>Not found</html>', { status: 404, headers: { 'content-type': 'text/html' } }))
+          : Promise.resolve(new Response(JSON.stringify(calm), { headers: { 'content-type': 'application/json' } })),
+      ),
+    )
+    const user = userEvent.setup()
+    render(<App />)
+    await user.type(await screen.findByLabelText('Look up an English word'), 'calm')
+    await user.click(screen.getByRole('button', { name: 'Look up' }))
+    expect(await screen.findByRole('heading', { name: 'calm' })).toBeTruthy()
+  })
+
   it('says "could not reach" (not "offline") when the request fails but the device is online', async () => {
     vi.stubGlobal('fetch', vi.fn(() => Promise.reject(new TypeError('Failed to fetch'))))
     const user = userEvent.setup()
