@@ -1,10 +1,13 @@
 // Free Dictionary API (no key): https://dictionaryapi.dev
 // Datamuse is used only to suggest spellings when a word is not found.
 
-// First try our own domain (Vercel / Vite forwards it), which avoids cross-site
-// problems in the browser. If that does not work, call the dictionary directly.
-const DICTIONARY_URLS = ['/dictionary/', 'https://api.dictionaryapi.dev/api/v2/entries/en/']
-const ATTEMPT_TIMEOUT_MS = 8000
+// Source 1: Free Dictionary API, through our own domain (Vercel / Vite forwards it).
+// Source 2: Wiktionary, used when source 1 is down or has no entry.
+const DICTIONARY_URL = '/dictionary/'
+const WIKTIONARY_URL = 'https://en.wiktionary.org/api/rest_v1/page/definition/'
+const DICTIONARY_TIMEOUT_MS = 5000
+const WIKTIONARY_TIMEOUT_MS = 8000
+// Datamuse suggests spellings when a word is not found.
 const SUGGEST_URL = 'https://api.datamuse.com/sug?max=5&s='
 
 export class LookupError extends Error {
@@ -45,9 +48,9 @@ export function normalizeEntry(word, data) {
 
 const isJson = (res) => (res.headers.get('content-type') || '').includes('json')
 
-async function attempt(url) {
+async function timedFetch(url, ms) {
   const ctrl = new AbortController()
-  const timer = setTimeout(() => ctrl.abort(), ATTEMPT_TIMEOUT_MS)
+  const timer = setTimeout(() => ctrl.abort(), ms)
   try {
     return await fetch(url, { signal: ctrl.signal })
   } finally {
@@ -55,42 +58,77 @@ async function attempt(url) {
   }
 }
 
-export async function fetchEntry(word) {
-  let res = null
-  let lastDetail = ''
-  for (const base of DICTIONARY_URLS) {
-    try {
-      const r = await attempt(base + encodeURIComponent(word))
-      // A page that is not JSON means this route does not exist here: try the next one.
-      if (!isJson(r) && r.status !== 200) {
-        lastDetail = `HTTP ${r.status} from ${base}`
-        continue
-      }
-      res = r
-      break
-    } catch (err) {
-      lastDetail =
-        err?.name === 'AbortError'
-          ? `Timed out after ${ATTEMPT_TIMEOUT_MS / 1000} seconds`
-          : `${err?.name ?? 'Error'}: ${err?.message ?? ''}`
+function stripHtml(html = '') {
+  if (typeof DOMParser !== 'undefined') {
+    return (new DOMParser().parseFromString(html, 'text/html').body.textContent || '').trim()
+  }
+  return html.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').trim()
+}
+
+// Wiktionary: { en: [{ partOfSpeech, definitions: [{ definition, parsedExamples }] }] }
+export function normalizeWiktionary(word, data) {
+  const meanings = []
+  for (const group of data?.en ?? []) {
+    for (const def of group.definitions ?? []) {
+      const definition = stripHtml(def.definition)
+      if (!definition) continue
+      const example = stripHtml(def.parsedExamples?.[0]?.example ?? def.examples?.[0] ?? '')
+      meanings.push({ pos: (group.partOfSpeech ?? '').toLowerCase(), definition, example })
     }
   }
+  const partOfSpeech = [...new Set(meanings.map((m) => m.pos).filter(Boolean))].join(', ')
+  return { word, phonetic: '', audio: '', partOfSpeech, meanings: meanings.slice(0, 12) }
+}
 
-  if (!res) {
-    // Only "offline" when the device says so. Otherwise the dictionary could not be
-    // reached (blocked, timeout, DNS, server down).
-    const offline = typeof navigator !== 'undefined' && navigator.onLine === false
-    throw offline
-      ? new LookupError('offline', 'No internet connection.', lastDetail)
-      : new LookupError('unreachable', 'Could not reach the dictionary.', lastDetail)
-  }
-  if (res.status === 404) throw new LookupError('notfound', 'No definitions found.')
-  if (!res.ok) throw new LookupError('error', 'The dictionary is not responding.', `HTTP ${res.status}`)
+function failureDetail(err, label, ms) {
+  const why = err?.name === 'AbortError' ? `timed out after ${ms / 1000}s` : `${err?.name ?? 'Error'}: ${err?.message ?? ''}`
+  return `${label}: ${why}`
+}
+
+// Returns an entry, null when the source says "no such word", or throws when it cannot answer.
+async function fromDictionaryApi(word) {
+  const res = await timedFetch(DICTIONARY_URL + encodeURIComponent(word), DICTIONARY_TIMEOUT_MS)
+  if (res.status === 404 && isJson(res)) return null
+  if (!res.ok || !isJson(res)) throw new Error(`HTTP ${res.status}`)
+  return normalizeEntry(word, await res.json())
+}
+
+async function fromWiktionary(word) {
+  const res = await timedFetch(WIKTIONARY_URL + encodeURIComponent(word), WIKTIONARY_TIMEOUT_MS)
+  if (res.status === 404) return null
+  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+  const entry = normalizeWiktionary(word, await res.json())
+  return entry.meanings.length ? entry : null
+}
+
+export async function fetchEntry(word) {
+  const notes = []
+  let answered = false // at least one source replied "no such word"
+
   try {
-    return normalizeEntry(word, await res.json())
-  } catch {
-    throw new LookupError('error', 'The dictionary is not responding.', 'Unreadable response')
+    const entry = await fromDictionaryApi(word)
+    if (entry && entry.meanings.length) return entry
+    answered = true
+  } catch (err) {
+    notes.push(failureDetail(err, 'Dictionary', DICTIONARY_TIMEOUT_MS))
   }
+
+  try {
+    const entry = await fromWiktionary(word)
+    if (entry) return entry
+    answered = true
+  } catch (err) {
+    notes.push(failureDetail(err, 'Wiktionary', WIKTIONARY_TIMEOUT_MS))
+  }
+
+  if (answered) throw new LookupError('notfound', 'No definitions found.')
+
+  // Only "offline" when the device says so. Otherwise the sources could not be reached.
+  const offline = typeof navigator !== 'undefined' && navigator.onLine === false
+  const detail = notes.join(' · ')
+  throw offline
+    ? new LookupError('offline', 'No internet connection.', detail)
+    : new LookupError('unreachable', 'Could not reach the dictionary.', detail)
 }
 
 export async function suggestSpellings(word) {

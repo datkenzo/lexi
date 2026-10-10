@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { normalizeEntry } from '../src/lib/dictionary.js'
+import { normalizeEntry, normalizeWiktionary } from '../src/lib/dictionary.js'
 
 const sample = [
   {
@@ -46,5 +46,27 @@ test('normalizeEntry copes with empty data', () => {
   const out = normalizeEntry('x', [])
   assert.deepEqual(out.meanings, [])
   assert.equal(out.phonetic, '')
+  assert.equal(out.audio, '')
+})
+
+test('normalizeWiktionary strips HTML and keeps parts of speech and examples', () => {
+  const data = {
+    en: [
+      {
+        partOfSpeech: 'Noun',
+        definitions: [
+          { definition: '<span>A state of <a href="x">peace</a>.</span>', parsedExamples: [{ example: '<i>Find your calm.</i>' }] },
+          { definition: '' },
+        ],
+      },
+      { partOfSpeech: 'Verb', definitions: [{ definition: 'To make calm.' }] },
+    ],
+    de: [{ partOfSpeech: 'Noun', definitions: [{ definition: 'ignored' }] }],
+  }
+  const out = normalizeWiktionary('calm', data)
+  assert.equal(out.meanings.length, 2)
+  assert.equal(out.meanings[0].definition, 'A state of peace.')
+  assert.equal(out.meanings[0].example, 'Find your calm.')
+  assert.equal(out.partOfSpeech, 'noun, verb')
   assert.equal(out.audio, '')
 })

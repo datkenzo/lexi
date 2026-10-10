@@ -24,6 +24,7 @@ function fakeFetch(url) {
   const json = { headers: { 'content-type': 'application/json' } }
   if (u.includes('/dictionary/calm')) return Promise.resolve(new Response(JSON.stringify(calm), json))
   if (u.includes('/dictionary/')) return Promise.resolve(new Response('{}', { status: 404, ...json }))
+  if (u.includes('wiktionary')) return Promise.resolve(new Response('{}', { status: 404, ...json }))
   if (u.includes('datamuse')) return Promise.resolve(new Response(JSON.stringify([{ word: 'calms' }])))
   return Promise.resolve(new Response('{}', { status: 500 }))
 }
@@ -43,13 +44,14 @@ afterEach(() => {
 })
 
 describe('Lexi', () => {
-  it('falls back to the direct dictionary address when our own route does not exist', async () => {
+  it('falls back to Wiktionary when the main dictionary is down', async () => {
+    const wiki = { en: [{ partOfSpeech: 'Adjective', definitions: [{ definition: '<span>Not <b>excited</b> or angry.</span>', parsedExamples: [{ example: '<i>Stay calm.</i>' }] }] }] }
     vi.stubGlobal(
       'fetch',
       vi.fn((url) =>
-        String(url).startsWith('/dictionary/')
-          ? Promise.resolve(new Response('<html>Not found</html>', { status: 404, headers: { 'content-type': 'text/html' } }))
-          : Promise.resolve(new Response(JSON.stringify(calm), { headers: { 'content-type': 'application/json' } })),
+        String(url).includes('wiktionary')
+          ? Promise.resolve(new Response(JSON.stringify(wiki), { headers: { 'content-type': 'application/json' } }))
+          : Promise.resolve(new Response('<html>522</html>', { status: 522, headers: { 'content-type': 'text/html' } })),
       ),
     )
     const user = userEvent.setup()
@@ -57,6 +59,7 @@ describe('Lexi', () => {
     await user.type(await screen.findByLabelText('Look up an English word'), 'calm')
     await user.click(screen.getByRole('button', { name: 'Look up' }))
     expect(await screen.findByRole('heading', { name: 'calm' })).toBeTruthy()
+    expect(await screen.findByText('Not excited or angry.')).toBeTruthy()
   })
 
   it('says "could not reach" (not "offline") when the request fails but the device is online', async () => {
