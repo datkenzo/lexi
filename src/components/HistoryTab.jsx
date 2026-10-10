@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { filterWords } from '../lib/words.js'
 import { StatusBadge } from './WordCard.jsx'
+import Icon from './Icon.jsx'
 
 const STATUS_OPTIONS = [
   { id: 'all', label: 'All' },
@@ -20,60 +21,61 @@ export default function HistoryTab({ words, onOpen }) {
   const [status, setStatus] = useState('all')
   const [range, setRange] = useState('all')
 
-  const list = useMemo(
-    () => filterWords(words, { text, status, range }),
-    [words, text, status, range],
-  )
+  const list = useMemo(() => filterWords(words, { text, status, range }), [words, text, status, range])
 
   return (
     <div className="stack">
-      <header>
+      <header className="topbar">
         <h1 className="title">History</h1>
-        <p className="muted">Words you looked up, newest first.</p>
+        <span className="label-caps">{words.length} {words.length === 1 ? 'word' : 'words'}</span>
       </header>
 
-      <input
-        className="field"
-        type="search"
-        value={text}
-        onChange={(e) => setText(e.target.value)}
-        placeholder="Search your words"
-        aria-label="Search your words"
-        autoCapitalize="none"
-        autoCorrect="off"
-        spellCheck="false"
-      />
+      <div className="input-wrap">
+        <Icon name="search" />
+        <input
+          type="search"
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          placeholder="Search your words"
+          aria-label="Search your words"
+          autoCapitalize="none"
+          autoCorrect="off"
+          spellCheck="false"
+        />
+      </div>
 
-      <div className="filters">
-        <div className="seg" role="group" aria-label="Status">
-          {STATUS_OPTIONS.map((o) => (
-            <button
-              key={o.id}
-              type="button"
-              className={status === o.id ? 'active' : ''}
-              aria-pressed={status === o.id}
-              onClick={() => setStatus(o.id)}
-            >
-              {o.label}
-            </button>
-          ))}
-        </div>
-        <select
-          className="field select"
-          value={range}
-          onChange={(e) => setRange(e.target.value)}
-          aria-label="Date"
-        >
-          {RANGE_OPTIONS.map((o) => (
-            <option key={o.id} value={o.id}>
-              {o.label}
-            </option>
-          ))}
-        </select>
+      <div className="chips" role="group" aria-label="Status">
+        {STATUS_OPTIONS.map((o) => (
+          <button
+            key={o.id}
+            type="button"
+            className={`choice ${status === o.id ? 'active' : ''}`}
+            aria-pressed={status === o.id}
+            onClick={() => setStatus(o.id)}
+          >
+            {o.label}
+          </button>
+        ))}
+      </div>
+      <div className="chips" role="group" aria-label="Date">
+        {RANGE_OPTIONS.map((o) => (
+          <button
+            key={o.id}
+            type="button"
+            className={`choice ${range === o.id ? 'active' : ''}`}
+            aria-pressed={range === o.id}
+            onClick={() => setRange(o.id)}
+          >
+            {o.label}
+          </button>
+        ))}
       </div>
 
       {words.length === 0 ? (
-        <p className="empty">No words yet. Look one up to get started.</p>
+        <div className="empty">
+          <div className="empty-art" aria-hidden="true">🗂️</div>
+          <p>No words yet. Look one up to get started.</p>
+        </div>
       ) : list.length === 0 ? (
         <p className="empty">No words match these filters.</p>
       ) : (

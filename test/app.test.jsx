@@ -44,13 +44,13 @@ afterEach(() => {
 })
 
 describe('Lexi', () => {
-  it('falls back to Wiktionary when the main dictionary is down', async () => {
-    const wiki = { en: [{ partOfSpeech: 'Adjective', definitions: [{ definition: '<span>Not <b>excited</b> or angry.</span>', parsedExamples: [{ example: '<i>Stay calm.</i>' }] }] }] }
+  it('falls back to Datamuse when the main dictionary is down', async () => {
+    const muse = [{ word: 'calm', defs: ['adj\tNot excited or angry.'], tags: ['ipa_pron:kˈɑm'] }]
     vi.stubGlobal(
       'fetch',
       vi.fn((url) =>
-        String(url).includes('wiktionary')
-          ? Promise.resolve(new Response(JSON.stringify(wiki), { headers: { 'content-type': 'application/json' } }))
+        String(url).includes('datamuse.com/words')
+          ? Promise.resolve(new Response(JSON.stringify(muse), { headers: { 'content-type': 'application/json' } }))
           : Promise.resolve(new Response('<html>522</html>', { status: 522, headers: { 'content-type': 'text/html' } })),
       ),
     )
@@ -60,6 +60,7 @@ describe('Lexi', () => {
     await user.click(screen.getByRole('button', { name: 'Look up' }))
     expect(await screen.findByRole('heading', { name: 'calm' })).toBeTruthy()
     expect(await screen.findByText('Not excited or angry.')).toBeTruthy()
+    expect(screen.getByText('/kˈɑm/')).toBeTruthy()
   })
 
   it('says "could not reach" (not "offline") when the request fails but the device is online', async () => {

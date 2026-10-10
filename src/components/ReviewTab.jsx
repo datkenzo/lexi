@@ -1,10 +1,11 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { filterWords, shuffle, STATUS } from '../lib/words.js'
+import { canSpeak, speak } from '../lib/speak.js'
 import Icon from './Icon.jsx'
 
 const MODES = [
-  { id: 'not_learned', label: 'Not learned' },
-  { id: 'all', label: 'All words' },
+  { id: 'not_learned', label: 'Not learned', note: 'Words still to learn' },
+  { id: 'all', label: 'All words', note: 'Everything you saved' },
 ]
 
 const RANGES = [
@@ -15,7 +16,7 @@ const RANGES = [
   { id: 'custom', label: 'Custom' },
 ]
 
-export default function ReviewTab({ words, onSetStatus }) {
+export default function ReviewTab({ words, onSetStatus, onFocusMode }) {
   const [phase, setPhase] = useState('setup') // setup | session | done
   const [mode, setMode] = useState('not_learned')
   const [range, setRange] = useState('all')
@@ -24,6 +25,12 @@ export default function ReviewTab({ words, onSetStatus }) {
   const [index, setIndex] = useState(0)
   const [flipped, setFlipped] = useState(false)
   const [results, setResults] = useState({ learned: 0, notLearned: 0 })
+
+  // Hide the tab bar during a session, like a lesson.
+  useEffect(() => {
+    onFocusMode?.(phase === 'session')
+    return () => onFocusMode?.(false)
+  }, [phase, onFocusMode])
 
   const matches = useMemo(
     () => filterWords(words, { status: mode === 'all' ? 'all' : 'not_learned', range, custom }),
@@ -42,9 +49,7 @@ export default function ReviewTab({ words, onSetStatus }) {
     const card = queue[index]
     onSetStatus(card.word, status)
     setResults((r) =>
-      status === STATUS.LEARNED
-        ? { ...r, learned: r.learned + 1 }
-        : { ...r, notLearned: r.notLearned + 1 },
+      status === STATUS.LEARNED ? { ...r, learned: r.learned + 1 } : { ...r, notLearned: r.notLearned + 1 },
     )
     if (index + 1 >= queue.length) {
       setPhase('done')
@@ -54,20 +59,16 @@ export default function ReviewTab({ words, onSetStatus }) {
     }
   }
 
-  const play = (e, url) => {
-    e.stopPropagation()
-    if (url) new Audio(url).play().catch(() => {})
-  }
-
   if (phase === 'session' && queue[index]) {
     const card = queue[index]
     const first = card.meanings?.[0]
     const example = card.meanings?.find((m) => m.example)?.example
+    const left = queue.length - index
     return (
-      <div className="stack">
+      <div className="session">
         <div className="session-bar">
           <button type="button" className="icon-btn" onClick={() => setPhase('setup')} aria-label="End review">
-            <Icon name="close" />
+            <Icon name="close" size={28} />
           </button>
           <div
             className="progress"
@@ -78,61 +79,76 @@ export default function ReviewTab({ words, onSetStatus }) {
           >
             <div className="progress-fill" style={{ width: `${(index / queue.length) * 100}%` }} />
           </div>
-          <span className="muted small">
-            {index + 1} / {queue.length}
+          <span className="counter">
+            {index + 1}/{queue.length}
           </span>
         </div>
 
-        <button
-          type="button"
-          className={`flash ${flipped ? 'flipped' : ''}`}
-          onClick={() => setFlipped((f) => !f)}
-          aria-label={flipped ? 'Show the word' : 'Show the meaning'}
-        >
-          <div className="flash-inner">
-            <div className="face front" aria-hidden={flipped}>
-              <h2 className="flash-word">{card.word}</h2>
-              <p className="muted">{card.phonetic}</p>
-              {card.audio && (
-                <span
-                  role="button"
-                  tabIndex={0}
-                  className="icon-btn"
-                  onClick={(e) => play(e, card.audio)}
-                  onKeyDown={(e) => e.key === 'Enter' && play(e, card.audio)}
-                  aria-label="Play pronunciation"
-                >
-                  <Icon name="speaker" />
-                </span>
-              )}
-              <p className="hint">Tap to reveal the meaning</p>
+        <div className={`deck ${left <= 1 ? 'single' : ''}`}>
+          <button
+            type="button"
+            className={`flash ${flipped ? 'flipped' : ''}`}
+            onClick={() => setFlipped((f) => !f)}
+            aria-label={flipped ? 'Show the word' : 'Show the meaning'}
+          >
+            <div className="flash-inner">
+              <div className="face front" aria-hidden={flipped}>
+                <h2 className="flash-word">{card.word}</h2>
+                {card.phonetic && <p className="phonetic">{card.phonetic}</p>}
+                {canSpeak(card) && (
+                  <span
+                    role="button"
+                    tabIndex={0}
+                    className="sound-btn"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      speak(card)
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault()
+                        e.stopPropagation()
+                        speak(card)
+                      }
+                    }}
+                    aria-label="Play pronunciation"
+                  >
+                    <Icon name="speaker" size={26} />
+                  </span>
+                )}
+                <p className="hint label-caps">Tap to flip</p>
+              </div>
+              <div className="face back" aria-hidden={!flipped}>
+                {first?.pos && <p className="label-caps">{first.pos}</p>}
+                <p className="flash-meaning">{first?.definition}</p>
+                {example && <p className="example">“{example}”</p>}
+                {card.my_sentence && (
+                  <div className="my-line">
+                    <span className="label-caps">My sentence</span>
+                    <p>{card.my_sentence}</p>
+                  </div>
+                )}
+              </div>
             </div>
-            <div className="face back" aria-hidden={!flipped}>
-              <p className="pos-line">{card.partOfSpeech}</p>
-              <p className="flash-meaning">{first?.definition}</p>
-              {example && <p className="example">“{example}”</p>}
-              {card.my_sentence && (
-                <p className="my-line">
-                  <span className="label">My sentence</span>
-                  {card.my_sentence}
-                </p>
-              )}
-            </div>
-          </div>
-        </button>
+          </button>
+        </div>
 
         {flipped ? (
-          <div className="answer-row">
-            <button type="button" className="btn btn-ghost btn-wide" onClick={() => answer(STATUS.NOT_LEARNED)}>
+          <div className="session-actions">
+            <button type="button" className="btn" onClick={() => answer(STATUS.NOT_LEARNED)}>
               Not learned
             </button>
-            <button type="button" className="btn btn-primary btn-wide" onClick={() => answer(STATUS.LEARNED)}>
+            <button type="button" className="btn btn-green" onClick={() => answer(STATUS.LEARNED)}>
               <Icon name="check" size={20} />
               Learned
             </button>
           </div>
         ) : (
-          <p className="muted center small">Tap the card, then mark it.</p>
+          <div className="session-actions one">
+            <button type="button" className="btn btn-primary" onClick={() => setFlipped(true)}>
+              Flip card
+            </button>
+          </div>
         )}
       </div>
     )
@@ -142,20 +158,21 @@ export default function ReviewTab({ words, onSetStatus }) {
     const total = results.learned + results.notLearned
     return (
       <div className="stack center">
+        <div className="done-art" aria-hidden="true">🎉</div>
         <header>
-          <h1 className="title">Session complete</h1>
+          <h1 className="done-title">Session complete</h1>
           <p className="muted">
             You reviewed {total} {total === 1 ? 'word' : 'words'}.
           </p>
         </header>
-        <section className="stats">
-          <div className="stat">
-            <span className="stat-value">{results.learned}</span>
-            <span className="stat-label">Learned</span>
+        <section className="result-tiles">
+          <div className="result green">
+            <div className="result-head">Learned</div>
+            <div className="result-body">{results.learned}</div>
           </div>
-          <div className="stat stat-accent">
-            <span className="stat-value">{results.notLearned}</span>
-            <span className="stat-label">Not learned</span>
+          <div className="result orange">
+            <div className="result-head">Not learned</div>
+            <div className="result-body">{results.notLearned}</div>
           </div>
         </section>
         <button type="button" className="btn btn-primary btn-wide" onClick={() => setPhase('setup')}>
@@ -169,36 +186,42 @@ export default function ReviewTab({ words, onSetStatus }) {
     <div className="stack">
       <header>
         <h1 className="title">Review</h1>
-        <p className="muted">Flip each card, then mark it Learned or Not learned.</p>
+        <p className="subtitle">Flip each card, then mark it Learned or Not learned.</p>
       </header>
 
       {words.length === 0 ? (
-        <p className="empty">No words yet. Look one up to get started.</p>
+        <div className="empty">
+          <div className="empty-art" aria-hidden="true">🃏</div>
+          <p>No words yet. Look one up to get started.</p>
+        </div>
       ) : (
         <>
-          <section className="card stack-tight">
-            <h2 className="section-title">Which words</h2>
-            <div className="seg" role="group" aria-label="Which words">
+          <section className="stack-tight">
+            <h2 className="label-caps">Which words</h2>
+            <div className="choices" role="group" aria-label="Which words">
               {MODES.map((o) => (
                 <button
                   key={o.id}
                   type="button"
-                  className={mode === o.id ? 'active' : ''}
+                  className={`choice ${mode === o.id ? 'active' : ''}`}
                   aria-pressed={mode === o.id}
                   onClick={() => setMode(o.id)}
                 >
                   {o.label}
+                  <small aria-hidden="true">{o.note}</small>
                 </button>
               ))}
             </div>
+          </section>
 
-            <h2 className="section-title">Time range</h2>
+          <section className="stack-tight">
+            <h2 className="label-caps">Time range</h2>
             <div className="chips" role="group" aria-label="Time range">
               {RANGES.map((o) => (
                 <button
                   key={o.id}
                   type="button"
-                  className={`chip ${range === o.id ? 'active' : ''}`}
+                  className={`choice ${range === o.id ? 'active' : ''}`}
                   aria-pressed={range === o.id}
                   onClick={() => setRange(o.id)}
                 >

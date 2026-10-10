@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { normalizeEntry, normalizeWiktionary } from '../src/lib/dictionary.js'
+import { normalizeDatamuse, normalizeEntry, normalizeWiktionary } from '../src/lib/dictionary.js'
 
 const sample = [
   {
@@ -69,4 +69,24 @@ test('normalizeWiktionary strips HTML and keeps parts of speech and examples', (
   assert.equal(out.meanings[0].example, 'Find your calm.')
   assert.equal(out.partOfSpeech, 'noun, verb')
   assert.equal(out.audio, '')
+})
+
+test('normalizeDatamuse reads definitions, parts of speech and IPA', () => {
+  const data = [
+    {
+      word: 'calm',
+      score: 1,
+      defs: ['adj\tPeaceful and free from anger.', 'n\tA period without wind.', 'v\t'],
+      tags: ['pron:K AA1 M ', 'ipa_pron:kˈɑm'],
+    },
+  ]
+  const out = normalizeDatamuse('calm', data)
+  assert.equal(out.meanings.length, 2)
+  assert.deepEqual(out.meanings[0], { pos: 'adjective', definition: 'Peaceful and free from anger.', example: '' })
+  assert.equal(out.partOfSpeech, 'adjective, noun')
+  assert.equal(out.phonetic, '/kˈɑm/')
+})
+
+test('normalizeDatamuse ignores a different word', () => {
+  assert.equal(normalizeDatamuse('zzzz', [{ word: 'calms', defs: ['n\tx'] }]).meanings.length, 0)
 })

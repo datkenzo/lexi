@@ -25,6 +25,7 @@ export default function App() {
   const [current, setCurrent] = useState(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
+  const [focus, setFocus] = useState(false) // true during a review session
 
   const stats = useMemo(() => getStats(words), [words])
 
@@ -126,7 +127,7 @@ export default function App() {
 
   return (
     <div className="app">
-      <main className="screen">
+      <main className={`screen ${focus ? 'focus' : ''}`}>
         {!ready ? (
           <p className="muted center">Loading...</p>
         ) : (
@@ -144,11 +145,12 @@ export default function App() {
               />
             )}
             {tab === 'history' && <HistoryTab words={words} onOpen={openSaved} />}
-            {tab === 'review' && <ReviewTab words={words} onSetStatus={setStatus} />}
+            {tab === 'review' && <ReviewTab words={words} onSetStatus={setStatus} onFocusMode={setFocus} />}
           </>
         )}
       </main>
 
+      {!focus && (
       <nav className="tabbar" aria-label="Main">
         <div className="tabbar-inner">
           {TABS.map((t) => (
@@ -165,6 +167,7 @@ export default function App() {
           ))}
         </div>
       </nav>
+      )}
     </div>
   )
 }

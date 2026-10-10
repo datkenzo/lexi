@@ -42,7 +42,8 @@ The "Suggest a sentence" button calls `api/sentence.js`, a small Vercel function
 - **Learned words** are skipped in "Not learned" mode. They come back only when you look them up again.
 - **Home screen** shows Total words and Not learned.
 - **Offline:** saved words and review keep working. New words need internet.
-- **Dark mode** follows the phone setting.
+- **Look:** bright, playful style inspired by Duolingo's UI, light theme only.
+- **Pronunciation:** plays the dictionary recording, or the phone reads the word aloud when there is none.
 
 ## Your data
 
@@ -51,7 +52,7 @@ Words are stored on the device (IndexedDB). There is no login and no sync in ver
 ## Where things are
 
 - `src/lib/words.js`: the rules (lookup, status, time ranges). Tested in `test/`.
-- `src/lib/dictionary.js`: Free Dictionary API. Datamuse suggests spellings when a word is not found.
+- `src/lib/dictionary.js`: looks words up in three free sources in order: Free Dictionary API (through `/dictionary/`, see `vercel.json`), then Datamuse, then Wiktionary. If one is down, the next one answers. Datamuse also suggests spellings.
 - `src/lib/db.js`: IndexedDB storage.
 - `src/components/`: Search, History and Review screens.
 - `src/styles.css`: colors, fonts and spacing from the project brief. Change the `:root` values to restyle the app.
