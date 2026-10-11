@@ -10,7 +10,6 @@ export default function SearchTab({
   onLookup,
   onSaveSentence,
   onRemove,
-  onReview,
 }) {
   const [query, setQuery] = useState('')
 
@@ -49,7 +48,7 @@ export default function SearchTab({
 
       <form className="searchbar" onSubmit={submit} role="search">
         <div className="input-wrap">
-          <Icon name="search" />
+          <Icon name="search" size={26} />
           <input
             type="search"
             value={query}
@@ -62,7 +61,7 @@ export default function SearchTab({
             enterKeyHint="search"
           />
         </div>
-        <button className="btn btn-primary" type="submit" disabled={loading || !query.trim()} aria-label="Look up">
+        <button className="btn btn-primary btn-wide" type="submit" disabled={loading || !query.trim()} aria-label="Look up">
           {loading ? '...' : 'Look up'}
         </button>
       </form>
@@ -88,10 +87,6 @@ export default function SearchTab({
         </div>
       )}
 
-      <button type="button" className="btn btn-primary btn-wide" onClick={onReview} disabled={stats.total === 0}>
-        <Icon name="cards" />
-        {stats.notLearned > 0 ? `Review ${stats.notLearned} not learned` : 'Review'}
-      </button>
     </div>
   )
 }

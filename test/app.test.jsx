@@ -108,7 +108,7 @@ describe('Lexi', () => {
     expect(stat('Not learned').textContent).toContain('1')
 
     // Review: mark it Learned.
-    await user.click(screen.getByRole('button', { name: /Review 1 not learned/ }))
+    await user.click(screen.getByRole('button', { name: 'Review' }))
     await user.click(await screen.findByRole('button', { name: /Start review \(1 word\)/ }))
     await user.click(screen.getByRole('button', { name: 'Show the meaning' }))
     await user.click(screen.getByRole('button', { name: /^Learned$/ }))

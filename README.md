@@ -38,12 +38,16 @@ Other commands:
 
 ## Your data
 
-Words are stored on the device (IndexedDB). There is no login and no sync in version 1, so the iPhone and the browser each have their own list. Clearing Safari website data deletes your words.
+Words are saved on each device first (IndexedDB), so Lexi works offline. To use the same words on your phone and computer, sign in with Google in the **Profile** tab. That needs a free Supabase project: follow [SETUP-SYNC.md](SETUP-SYNC.md) once.
+
+Without sync, each device keeps its own list, and clearing Safari website data deletes it.
 
 ## Where things are
 
 - `src/lib/words.js`: the rules (lookup, status, time ranges). Tested in `test/`.
 - `src/lib/dictionary.js`: looks words up in three free sources in order: Free Dictionary API (through `/dictionary/`, see `vercel.json`), then Datamuse, then Wiktionary. If one is down, the next one answers. Datamuse also suggests spellings.
-- `src/lib/db.js`: IndexedDB storage.
+- `src/lib/db.js`: IndexedDB storage on the device.
+- `src/lib/sync.js`, `src/lib/syncLogic.js`: sync with Supabase (most recent change wins).
+- `supabase/setup.sql`: the database table and its security rules.
 - `src/components/`: Search, History and Review screens.
 - `src/styles.css`: colors, fonts and spacing from the project brief. Change the `:root` values to restyle the app.
