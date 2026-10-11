@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import WordCard from './WordCard.jsx'
 import Icon from './Icon.jsx'
+import Avatar from './Avatar.jsx'
 
 export default function SearchTab({
   stats,
@@ -10,6 +11,8 @@ export default function SearchTab({
   onLookup,
   onSaveSentence,
   onRemove,
+  user,
+  onOpenProfile,
 }) {
   const [query, setQuery] = useState('')
 
@@ -23,20 +26,28 @@ export default function SearchTab({
     onLookup(query)
   }
 
+  // Enter looks up the word (Shift + Enter is ignored: a word has no new lines).
+  const onKeyDown = (e) => {
+    if (e.key === 'Enter' && !e.nativeEvent.isComposing) {
+      e.preventDefault()
+      if (query.trim() && !loading) onLookup(query)
+    }
+  }
+
   return (
     <div className="stack">
       {/* Top bar: like the streak and gems row in Duolingo */}
-      <header className="topbar">
+      <header className={`topbar ${user ? 'has-avatar' : ''}`}>
         <h1 className="brand">Lexi</h1>
         <section className="stat-chips" aria-label="Your progress">
-          <div className="stat-chip blue">
+          <div className="stat-chip blue" title="Total words">
             <Icon name="book" size={24} />
             <div className="stat-text">
               <span className="stat-value">{stats.total}</span>
               <span className="stat-label">Total words</span>
             </div>
           </div>
-          <div className="stat-chip orange">
+          <div className="stat-chip orange" title="Not learned">
             <Icon name="target" size={24} />
             <div className="stat-text">
               <span className="stat-value">{stats.notLearned}</span>
@@ -44,15 +55,21 @@ export default function SearchTab({
             </div>
           </div>
         </section>
+        {user && (
+          <button type="button" className="topbar-avatar" onClick={onOpenProfile} aria-label="Open your profile">
+            <Avatar user={user} size="small" />
+          </button>
+        )}
       </header>
 
       <form className="searchbar" onSubmit={submit} role="search">
         <div className="input-wrap">
           <Icon name="search" size={26} />
-          <input
-            type="search"
+          <textarea
+            rows={2}
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            onChange={(e) => setQuery(e.target.value.replace(/\n/g, ''))}
+            onKeyDown={onKeyDown}
             placeholder="Type a word"
             aria-label="Look up an English word"
             autoCapitalize="none"

@@ -330,13 +330,34 @@ ul {
 }
 
 .searchbar .input-wrap {
-  min-height: 68px;
+  min-height: 136px; /* twice the old height */
+  align-items: flex-start;
   border-radius: var(--radius);
-  padding: 0 var(--s5);
+  padding: var(--s4) var(--s5);
+  cursor: text;
 }
 
-.searchbar .input-wrap input {
-  font-size: 21px;
+.searchbar .input-wrap svg {
+  margin-top: 4px;
+}
+
+.searchbar .input-wrap textarea {
+  flex: 1;
+  min-width: 0;
+  align-self: stretch;
+  border: 0;
+  background: transparent;
+  resize: none;
+  font: inherit;
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1.4;
+  padding: 0;
+  color: var(--text);
+}
+
+.searchbar .input-wrap textarea:focus-visible {
+  outline: none;
 }
 
 .input-wrap {
@@ -1208,5 +1229,77 @@ textarea::placeholder {
   .choice,
   .history-item {
     transition: none;
+  }
+}
+
+/* Avatar in the top bar (after sign-in) */
+.topbar {
+  gap: var(--s2);
+}
+
+.topbar .brand {
+  margin-right: auto;
+}
+
+.topbar-avatar {
+  flex: none;
+  padding: 0;
+  border: 0;
+  background: none;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.topbar-avatar:focus-visible {
+  outline: 3px solid var(--blue-line);
+  outline-offset: 2px;
+}
+
+.avatar-small {
+  width: 44px;
+  height: 44px;
+  font-size: 18px;
+}
+
+.avatar-large {
+  width: 104px;
+  height: 104px;
+  font-size: 44px;
+  border-width: 3px;
+}
+
+/* Signed-in profile */
+.profile-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--s3);
+  padding: var(--s5) var(--s4);
+  text-align: center;
+}
+
+.profile-name {
+  font-size: 26px;
+  font-weight: 900;
+  overflow-wrap: anywhere;
+}
+
+.profile-card .sync-line {
+  flex-wrap: wrap;
+  justify-content: center;
+  color: var(--muted);
+  font-size: 15px;
+}
+
+.btn-danger {
+  --fill: var(--bg);
+  --edge: var(--red-line);
+  --ink: var(--red-ink);
+}
+
+/* With the avatar there, phones have no room for the labels under the numbers. */
+@media (max-width: 520px) {
+  .topbar.has-avatar .stat-chip .stat-label {
+    display: none;
   }
 }

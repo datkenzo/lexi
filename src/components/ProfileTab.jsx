@@ -1,4 +1,5 @@
 import Icon from './Icon.jsx'
+import Avatar, { userName } from './Avatar.jsx'
 
 function timeAgo(ms) {
   if (!ms) return ''
@@ -52,8 +53,6 @@ export default function ProfileTab({ configured, session, sync, stats, onSignIn,
   }
 
   const user = session.user
-  const name = user.user_metadata?.full_name || user.user_metadata?.name || user.email
-  const avatar = user.user_metadata?.avatar_url
 
   return (
     <div className="stack">
@@ -61,23 +60,10 @@ export default function ProfileTab({ configured, session, sync, stats, onSignIn,
         <h1 className="title">Profile</h1>
       </header>
 
-      <div className="tile profile">
-        {avatar ? (
-          <img className="avatar" src={avatar} alt="" referrerPolicy="no-referrer" />
-        ) : (
-          <span className="avatar avatar-letter" aria-hidden="true">
-            {name.slice(0, 1).toUpperCase()}
-          </span>
-        )}
-        <div className="profile-text">
-          <p className="history-word">{name}</p>
-          <p className="muted small">{user.email}</p>
-        </div>
-      </div>
-
-      <div className="tile stack-tight" aria-live="polite">
-        <span className="label-caps">Sync</span>
-        <div className="sync-line">
+      <div className="profile-card">
+        <Avatar user={user} />
+        <p className="profile-name">{userName(user)}</p>
+        <div className="sync-line" aria-live="polite">
           <span className={`sync-dot ${sync.state}`} aria-hidden="true" />
           <span>
             {sync.state === 'syncing' && 'Syncing...'}
@@ -85,25 +71,24 @@ export default function ProfileTab({ configured, session, sync, stats, onSignIn,
             {sync.state === 'error' && 'Not synced'}
             {sync.state === 'idle' && 'Waiting to sync'}
           </span>
+          <button
+            type="button"
+            className="link"
+            onClick={onSyncNow}
+            disabled={sync.state === 'syncing'}
+          >
+            Sync now
+          </button>
         </div>
-        {sync.error && <SyncError message={sync.error} />}
-        <button
-          type="button"
-          className="btn btn-small"
-          onClick={onSyncNow}
-          disabled={sync.state === 'syncing'}
-          style={{ alignSelf: 'flex-start' }}
-        >
-          <Icon name="refresh" size={18} />
-          Sync now
-        </button>
-        <p className="muted small">Changes sync by themselves when you are online.</p>
       </div>
 
-      <button type="button" className="link link-quiet" onClick={onSignOut}>
-        Sign out
+      {sync.error && <SyncError message={sync.error} />}
+
+      <button type="button" className="btn btn-danger btn-wide" onClick={onSignOut}>
+        <Icon name="logout" size={20} />
+        Log out
       </button>
-      <p className="muted small">Signing out keeps the words on this device.</p>
+      <p className="muted small center">Logging out keeps the words on this device.</p>
     </div>
   )
 }
@@ -111,7 +96,7 @@ export default function ProfileTab({ configured, session, sync, stats, onSignIn,
 function SyncError({ message }) {
   return (
     <div className="alert">
-      <strong>Sync problem</strong>
+      <strong>{message.startsWith('Sign-in') ? 'Sign-in problem' : 'Sync problem'}</strong>
       <span className="details">{message}</span>
     </div>
   )

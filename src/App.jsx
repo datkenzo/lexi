@@ -49,6 +49,13 @@ export default function App() {
 
   useEffect(() => {
     if (!supabase) return
+    const params = new URLSearchParams(window.location.hash.slice(1) + '&' + window.location.search.slice(1))
+    const authError = params.get('error_description') || params.get('error')
+    if (authError) {
+      setSync({ state: 'error', at: null, error: `Sign-in failed: ${authError.replace(/\+/g, ' ')}` })
+      setTab('profile')
+      window.history.replaceState(null, '', window.location.pathname)
+    }
     supabase.auth.getSession().then(({ data }) => setSession(data.session))
     const { data } = supabase.auth.onAuthStateChange((_event, s) => setSession(s))
     return () => data.subscription.unsubscribe()
@@ -232,6 +239,8 @@ export default function App() {
                 onLookup={lookup}
                 onSaveSentence={saveSentence}
                 onRemove={remove}
+                user={session?.user}
+                onOpenProfile={() => setTab('profile')}
               />
             )}
             {tab === 'history' && <HistoryTab words={words} onOpen={openSaved} />}
