@@ -40,14 +40,14 @@ export default function SearchTab({
       <header className={`topbar ${user ? 'has-avatar' : ''}`}>
         <h1 className="brand">Lexi</h1>
         <section className="stat-chips" aria-label="Your progress">
-          <div className="stat-chip blue" title="Total words">
+          <div className="stat-chip" title="Total words">
             <Icon name="book" size={24} />
             <div className="stat-text">
               <span className="stat-value">{stats.total}</span>
               <span className="stat-label">Total words</span>
             </div>
           </div>
-          <div className="stat-chip orange" title="Not learned">
+          <div className="stat-chip" title="Not learned">
             <Icon name="target" size={24} />
             <div className="stat-text">
               <span className="stat-value">{stats.notLearned}</span>

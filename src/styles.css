@@ -1,30 +1,30 @@
-/* Lexi, bright playful style (inspired by Duolingo's UI). Orange is the brand color.
-   Light theme only. Colors chosen so text meets contrast on its background. */
+/* Lexi, bright playful style (inspired by Duolingo's UI). Light theme only.
+   Orange is used only for the primary button; blue is the secondary and highlight color.
+   Text on fills and tints is at least 4.5:1. */
 :root {
-  --brand: #ff9600; /* logo and decoration only, never small text */
-  --primary: #eb6a00; /* button fill, white text 3.2:1 on bold 17px+ */
-  --primary-shadow: #b85300;
-  --primary-tint: #fff1e5;
-  --primary-ink: #c8520a; /* orange text on tint */
+  --primary: #f16e00; /* the only orange: fill of the primary button */
+  --primary-shadow: #8d4000; /* bottom edge of the primary button */
 
-  --green: #489a00;
-  --green-shadow: #367300;
-  --green-bright: #58cc02; /* progress bar */
+  --green: #3e8600; /* fill of green buttons and the Learned tile; white text 4.5:1 */
+  --green-shadow: #2c5f00;
+  --green-bright: #58cc02; /* progress bar and the synced dot, never text */
   --green-tint: #e7f8d9;
-  --green-ink: #3f8a00;
+  --green-ink: #397d00; /* text on green-tint, 4.5:1 */
 
-  --blue-ink: #1878b8;
+  --blue-ink: #1772ae; /* secondary: links, active states, Not learned; 4.5:1 on white and blue-tint */
+  --blue-shadow: #115481;
   --blue-tint: #ddf4ff;
   --blue-line: #84d8ff;
 
-  --red-ink: #d63333;
+  --red-ink: #d32a2a;
   --red-tint: #ffefef;
   --red-line: #ffc1c1;
 
+  --on-fill: #ffffff; /* text and icons on primary, green and blue fills */
   --bg: #ffffff;
   --surface-2: #f7f7f7;
   --text: #3c3c3c;
-  --muted: #737373;
+  --muted: #717171;
   --faint: #afafaf; /* placeholders and disabled only */
   --line: #e5e5e5;
 
@@ -36,6 +36,8 @@
   --s6: 32px;
   --radius: 16px;
   --radius-sm: 12px;
+  --radius-lg: 24px;
+  --radius-pill: 999px;
   --depth: 4px; /* the "3D" bottom edge on buttons and tiles */
 
   --font: 'Nunito', ui-rounded, system-ui, -apple-system, sans-serif;
@@ -68,7 +70,7 @@ textarea {
 }
 
 :focus-visible {
-  outline: 3px solid var(--blue-line);
+  outline: 3px solid var(--blue-ink);
   outline-offset: 2px;
 }
 
@@ -133,7 +135,7 @@ ul {
   font-weight: 900;
   font-size: 30px;
   letter-spacing: -0.02em;
-  color: var(--brand);
+  color: var(--blue-ink);
   line-height: 1;
 }
 
@@ -177,10 +179,6 @@ ul {
   padding: var(--s4);
 }
 
-.tile-flat {
-  border-bottom-width: 2px;
-}
-
 /* ---------- Buttons ---------- */
 .btn {
   --fill: var(--bg);
@@ -219,13 +217,13 @@ ul {
 .btn-primary {
   --fill: var(--primary);
   --edge: var(--primary-shadow);
-  --ink: #fff;
+  --ink: var(--on-fill);
 }
 
 .btn-green {
   --fill: var(--green);
   --edge: var(--green-shadow);
-  --ink: #fff;
+  --ink: var(--on-fill);
 }
 
 .btn-word {
@@ -302,8 +300,8 @@ ul {
   border-radius: var(--radius-sm);
   border: 0;
   background: var(--blue-ink);
-  color: #fff;
-  box-shadow: 0 var(--depth) 0 #12598a;
+  color: var(--on-fill);
+  box-shadow: 0 var(--depth) 0 var(--blue-shadow);
   margin-bottom: var(--depth);
   cursor: pointer;
   flex: none;
@@ -374,7 +372,7 @@ ul {
 }
 
 .input-wrap:focus-within {
-  border-color: var(--blue-line);
+  border-color: var(--blue-ink);
   background: var(--bg);
 }
 
@@ -418,48 +416,12 @@ textarea::placeholder {
 }
 
 .field:focus {
-  border-color: var(--blue-line);
+  border-color: var(--blue-ink);
   background: var(--bg);
   outline: none;
 }
 
 /* ---------- Stats ---------- */
-.stats {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: var(--s3);
-}
-
-.stat {
-  display: flex;
-  align-items: center;
-  gap: var(--s3);
-}
-
-.stat-icon {
-  width: 44px;
-  height: 44px;
-  border-radius: 12px;
-  display: grid;
-  place-items: center;
-  flex: none;
-}
-
-.stat-icon.blue {
-  background: var(--blue-tint);
-  color: var(--blue-ink);
-}
-
-.stat-icon.orange {
-  background: var(--primary-tint);
-  color: var(--primary);
-}
-
-.stat-icon.green {
-  background: var(--green-tint);
-  color: var(--green-ink);
-}
-
 .stat-text {
   display: flex;
   flex-direction: column;
@@ -493,12 +455,8 @@ textarea::placeholder {
   border: 2px solid var(--line);
 }
 
-.stat-chip.blue svg {
+.stat-chip svg {
   color: var(--blue-ink);
-}
-
-.stat-chip.orange svg {
-  color: var(--primary);
 }
 
 .stat-chip .stat-value {
@@ -550,8 +508,8 @@ textarea::placeholder {
 }
 
 .banner-info {
-  background: var(--primary-tint);
-  color: var(--primary-ink);
+  background: var(--blue-tint);
+  color: var(--blue-ink);
 }
 
 .alert {
@@ -702,14 +660,14 @@ textarea::placeholder {
   font-weight: 800;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   padding: 3px var(--s3);
   white-space: nowrap;
 }
 
-.badge-warn {
-  background: var(--primary-tint);
-  color: var(--primary-ink);
+.badge-todo {
+  background: var(--blue-tint);
+  color: var(--blue-ink);
 }
 
 .badge-ok {
@@ -785,7 +743,7 @@ textarea::placeholder {
 }
 
 .section textarea:focus {
-  border-color: var(--blue-line);
+  border-color: var(--blue-ink);
   background: var(--bg);
   outline: none;
 }
@@ -868,7 +826,7 @@ textarea::placeholder {
 }
 
 .history-date {
-  color: var(--faint);
+  color: var(--muted);
   font-size: 13px;
   font-weight: 700;
 }
@@ -891,7 +849,7 @@ textarea::placeholder {
   flex: 1;
   height: 16px;
   background: var(--line);
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   overflow: hidden;
 }
 
@@ -900,7 +858,7 @@ textarea::placeholder {
   height: 100%;
   min-width: 16px;
   background: var(--green-bright);
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   transition: width 0.35s ease;
 }
 
@@ -912,7 +870,7 @@ textarea::placeholder {
   right: 8px;
   top: 4px;
   height: 4px;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: rgba(255, 255, 255, 0.35);
 }
 
@@ -988,7 +946,7 @@ textarea::placeholder {
   background: var(--bg);
   border: 2px solid var(--line);
   border-bottom-width: calc(2px + var(--depth));
-  border-radius: 24px;
+  border-radius: var(--radius-lg);
   padding: var(--s5);
   display: flex;
   flex-direction: column;
@@ -1057,7 +1015,7 @@ textarea::placeholder {
 .done-title {
   font-weight: 900;
   font-size: 30px;
-  color: var(--brand);
+  color: var(--blue-ink);
 }
 
 .result-tiles {
@@ -1075,7 +1033,7 @@ textarea::placeholder {
 }
 
 .result-head {
-  color: #fff;
+  color: var(--on-fill);
   font-size: 13px;
   font-weight: 900;
   letter-spacing: 0.08em;
@@ -1102,25 +1060,19 @@ textarea::placeholder {
   color: var(--green-ink);
 }
 
-.result.orange {
-  border-color: var(--primary);
+.result.todo {
+  border-color: var(--blue-ink);
 }
 
-.result.orange .result-head {
-  background: var(--primary);
+.result.todo .result-head {
+  background: var(--blue-ink);
 }
 
-.result.orange .result-body {
-  color: var(--primary-ink);
+.result.todo .result-body {
+  color: var(--blue-ink);
 }
 
 /* ---------- Profile ---------- */
-.profile {
-  display: flex;
-  align-items: center;
-  gap: var(--s4);
-}
-
 .avatar {
   width: 56px;
   height: 56px;
@@ -1133,15 +1085,10 @@ textarea::placeholder {
 .avatar-letter {
   display: grid;
   place-items: center;
-  background: var(--primary-tint);
-  color: var(--primary-ink);
+  background: var(--blue-tint);
+  color: var(--blue-ink);
   font-weight: 900;
   font-size: 24px;
-}
-
-.profile-text {
-  min-width: 0;
-  overflow-wrap: anywhere;
 }
 
 .sync-line {
@@ -1251,7 +1198,7 @@ textarea::placeholder {
 }
 
 .topbar-avatar:focus-visible {
-  outline: 3px solid var(--blue-line);
+  outline: 3px solid var(--blue-ink);
   outline-offset: 2px;
 }
 

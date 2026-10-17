@@ -6,7 +6,7 @@ import Icon from './Icon.jsx'
 export function StatusBadge({ status }) {
   const learned = status === STATUS.LEARNED
   return (
-    <span className={`badge ${learned ? 'badge-ok' : 'badge-warn'}`}>
+    <span className={`badge ${learned ? 'badge-ok' : 'badge-todo'}`}>
       {learned ? 'Learned' : 'Not learned'}
     </span>
   )

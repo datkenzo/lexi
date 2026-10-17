@@ -170,7 +170,7 @@ export default function ReviewTab({ words, onSetStatus, onFocusMode }) {
             <div className="result-head">Learned</div>
             <div className="result-body">{results.learned}</div>
           </div>
-          <div className="result orange">
+          <div className="result todo">
             <div className="result-head">Not learned</div>
             <div className="result-body">{results.notLearned}</div>
           </div>
