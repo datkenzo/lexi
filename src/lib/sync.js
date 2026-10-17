@@ -1,5 +1,13 @@
-import { getAllRaw, getRaw, markClean, putSynced } from './db.js'
-import { fromRow, needsUpload, pickWinner, toRow } from './syncLogic.js'
+import {
+  applyRemoteActivity,
+  getActivity,
+  getAllRaw,
+  getRaw,
+  markActivityClean,
+  markClean,
+  putSynced,
+} from './db.js'
+import { activityFromRow, activityToRow, fromRow, needsUpload, pickWinner, toRow } from './syncLogic.js'
 
 const PAGE = 1000
 
@@ -41,7 +49,51 @@ export async function syncNow(client, userId) {
   }
 
   writeCursor(key, cursor)
-  return { pulled, pushed: pending.length }
+
+  const activity = await syncActivity(client, userId)
+  return { pulled, pushed: pending.length, activityPulled: activity.pulled, activityMissing: activity.missing }
+}
+
+// Streak days work like words, but two devices add their counts together instead of
+// one change winning (see mergeBy in streak.js). If the `activity` table has not been
+// created yet, words still sync and the streak just stays on this device.
+async function syncActivity(client, userId) {
+  const key = `lexi.activityCursor.${userId}`
+  let cursor = readCursor(key)
+  let pulled = 0
+  try {
+    for (;;) {
+      const { data, error } = await client
+        .from('activity')
+        .select('day, data, updated_at, synced_at')
+        .gt('synced_at', cursor)
+        .order('synced_at', { ascending: true })
+        .limit(PAGE)
+      if (error) throw error
+      for (const row of data) {
+        const remote = activityFromRow(row)
+        if (await applyRemoteActivity(remote.day, remote.by)) pulled++
+        cursor = row.synced_at
+      }
+      if (data.length < PAGE) break
+    }
+
+    const pending = (await getActivity()).filter((r) => r.dirty)
+    for (let i = 0; i < pending.length; i += PAGE) {
+      const batch = pending.slice(i, i + PAGE)
+      const { error } = await client
+        .from('activity')
+        .upsert(batch.map((r) => activityToRow(r, userId)), { onConflict: 'user_id,day' })
+      if (error) throw error
+      for (const rec of batch) await markActivityClean(rec.day, rec.updated_at)
+    }
+
+    writeCursor(key, cursor)
+    return { pulled, missing: false }
+  } catch (error) {
+    if (error.code === '42P01' || error.code === 'PGRST205') return { pulled, missing: true }
+    throw explain(error)
+  }
 }
 
 function readCursor(key) {

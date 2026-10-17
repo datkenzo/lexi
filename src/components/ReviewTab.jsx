@@ -16,7 +16,7 @@ const RANGES = [
   { id: 'custom', label: 'Custom' },
 ]
 
-export default function ReviewTab({ words, onSetStatus, onFocusMode }) {
+export default function ReviewTab({ words, onSetStatus, onFocusMode, onCardReviewed }) {
   const [phase, setPhase] = useState('setup') // setup | session | done
   const [mode, setMode] = useState('not_learned')
   const [range, setRange] = useState('all')
@@ -48,6 +48,7 @@ export default function ReviewTab({ words, onSetStatus, onFocusMode }) {
   const answer = (status) => {
     const card = queue[index]
     onSetStatus(card.word, status)
+    onCardReviewed?.()
     setResults((r) =>
       status === STATUS.LEARNED ? { ...r, learned: r.learned + 1 } : { ...r, notLearned: r.notLearned + 1 },
     )

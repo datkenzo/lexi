@@ -1,13 +1,16 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { applyLookup, getStats, normalizeWord, STATUS } from './lib/words.js'
 import { fetchEntry, suggestSpellings } from './lib/dictionary.js'
-import { deleteWord, getAll, getWord, onLocalChange, putWord } from './lib/db.js'
+import { deleteWord, getActivity, getAll, getWord, onLocalChange, putWord, recordCard } from './lib/db.js'
+import { computeStreak, dayKey } from './lib/streak.js'
+import { deviceId } from './lib/device.js'
 import { supabase, syncConfigured } from './lib/supabase.js'
 import { syncNow } from './lib/sync.js'
 import SearchTab from './components/SearchTab.jsx'
 import HistoryTab from './components/HistoryTab.jsx'
 import ReviewTab from './components/ReviewTab.jsx'
 import ProfileTab from './components/ProfileTab.jsx'
+import StreakScreen from './components/StreakScreen.jsx'
 import Icon from './components/Icon.jsx'
 
 const TABS = [
@@ -30,13 +33,25 @@ export default function App() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [focus, setFocus] = useState(false) // true during a review session
+  const [showStreak, setShowStreak] = useState(false)
+  const [activity, setActivity] = useState([])
+  const [today, setToday] = useState(dayKey())
 
   const stats = useMemo(() => getStats(words), [words])
+  const streak = useMemo(() => computeStreak(activity, today), [activity, today])
+
+  // A new day starts at midnight: refresh when you come back to the app.
+  useEffect(() => {
+    const refresh = () => document.visibilityState === 'visible' && setToday(dayKey())
+    document.addEventListener('visibilitychange', refresh)
+    return () => document.removeEventListener('visibilitychange', refresh)
+  }, [])
 
   useEffect(() => {
     getAll()
       .then(setWords)
       .finally(() => setReady(true))
+    getActivity().then(setActivity)
     // Ask the browser to keep our data (helps on iPhone).
     navigator.storage?.persist?.()
   }, [])
@@ -72,7 +87,8 @@ export default function App() {
     syncing.current = true
     setSync((s) => ({ ...s, state: 'syncing' }))
     try {
-      const { pulled } = await syncNow(supabase, userId)
+      const { pulled, activityPulled } = await syncNow(supabase, userId)
+      if (activityPulled > 0) setActivity(await getActivity())
       if (pulled > 0) {
         const all = await getAll()
         setWords(all)
@@ -217,6 +233,14 @@ export default function App() {
     [upsert],
   )
 
+  // One more card reviewed on this device: it counts toward today's goal.
+  const cardReviewed = useCallback(async () => {
+    const day = dayKey()
+    const record = await recordCard(deviceId(), day)
+    setToday(day)
+    setActivity((prev) => [...prev.filter((r) => r.day !== record.day), record])
+  }, [])
+
   const remove = useCallback(async (word) => {
     await deleteWord(word)
     setWords((prev) => prev.filter((w) => w.word !== word))
@@ -225,14 +249,25 @@ export default function App() {
 
   return (
     <div className="app">
-      <main className={`screen ${focus ? 'focus' : ''}`}>
+      <main className={`screen ${focus || showStreak ? 'focus' : ''}`}>
         {!ready ? (
           <p className="muted center">Loading...</p>
+        ) : showStreak ? (
+          <StreakScreen
+            streak={streak}
+            onClose={() => setShowStreak(false)}
+            onReview={() => {
+              setShowStreak(false)
+              setTab('review')
+            }}
+          />
         ) : (
           <>
             {tab === 'search' && (
               <SearchTab
                 stats={stats}
+                streak={streak}
+                onOpenStreak={() => setShowStreak(true)}
                 current={current}
                 loading={loading}
                 error={error}
@@ -244,7 +279,7 @@ export default function App() {
               />
             )}
             {tab === 'history' && <HistoryTab words={words} onOpen={openSaved} />}
-            {tab === 'review' && <ReviewTab words={words} onSetStatus={setStatus} onFocusMode={setFocus} />}
+            {tab === 'review' && <ReviewTab words={words} onSetStatus={setStatus} onFocusMode={setFocus} onCardReviewed={cardReviewed} />}
             {tab === 'profile' && (
               <ProfileTab
                 configured={syncConfigured}
@@ -260,7 +295,7 @@ export default function App() {
         )}
       </main>
 
-      {!focus && (
+      {!focus && !showStreak && (
         <nav className="tabbar" aria-label="Main">
           <div className="tabbar-inner">
             {TABS.map((t) => (

@@ -1,9 +1,11 @@
 /* Lexi, bright playful style (inspired by Duolingo's UI). Light theme only.
-   Orange is used only for the primary button; blue is the secondary and highlight color.
+   Orange is used only for the primary button and the streak flame; blue is the secondary and highlight color.
    Text on fills and tints is at least 4.5:1. */
 :root {
   --primary: #f16e00; /* the only orange: fill of the primary button */
   --primary-shadow: #8d4000; /* bottom edge of the primary button */
+  --flame-mid: #ffb020; /* streak flame only: the middle layer */
+  --flame-core: #fff1c2; /* streak flame only: the inner glow */
 
   --green: #3e8600; /* fill of green buttons and the Learned tile; white text 4.5:1 */
   --green-shadow: #2c5f00;
@@ -1249,4 +1251,106 @@ textarea::placeholder {
   .topbar.has-avatar .stat-chip .stat-label {
     display: none;
   }
+}
+
+/* ---------- Streak ---------- */
+.flame .f1 {
+  fill: var(--primary);
+}
+.flame .f2 {
+  fill: var(--flame-mid);
+}
+.flame .f3 {
+  fill: var(--flame-core);
+}
+/* Until today's goal is reached the flame is grey. */
+.flame.off .f1 {
+  fill: var(--faint);
+}
+.flame.off .f2 {
+  fill: var(--line);
+}
+.flame.off .f3 {
+  fill: var(--bg);
+}
+
+/* The streak chip in the top bar is a button that opens the Streak screen. */
+.stat-chip-link {
+  background: var(--bg);
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.stat-chip-link:hover {
+  background: var(--surface-2);
+}
+.stat-chip-link .flame {
+  flex: none;
+}
+
+.streak {
+  min-height: calc(100dvh - var(--s4) - var(--s5));
+}
+.streak-hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--s1);
+  padding-top: var(--s1);
+}
+.streak-number {
+  font-size: 72px;
+  line-height: 1;
+  font-weight: 900;
+  color: var(--text);
+}
+.week {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: var(--s1);
+}
+.week-day {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+.dot {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-pill);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid var(--line);
+  background: var(--bg);
+}
+.dot.done {
+  background: var(--green);
+  border-color: var(--green);
+  color: var(--on-fill);
+}
+.dot.today {
+  background: var(--blue-tint);
+  border-color: var(--blue-line);
+}
+.week-label {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--muted);
+}
+.week-label.today {
+  color: var(--blue-ink);
+}
+.streak-foot {
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s3);
+}
+.goal-row {
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
 }

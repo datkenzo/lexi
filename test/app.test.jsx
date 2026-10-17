@@ -3,7 +3,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import App from '../src/App.jsx'
-import { deleteWord, getAll } from '../src/lib/db.js'
+import { openDB } from 'idb'
+import { deleteWord, getAll, putWord } from '../src/lib/db.js'
 
 const calm = [
   {
@@ -33,8 +34,9 @@ const stat = (label) =>
   within(screen.getByLabelText('Your progress')).getByText(label).parentElement
 
 beforeEach(async () => {
-  // Empty the word list so every test starts fresh.
+  // Empty the word list and the streak so every test starts fresh.
   for (const w of await getAll()) await deleteWord(w.word)
+  await (await openDB('lexi', 2)).clear('activity')
   vi.stubGlobal('fetch', vi.fn(fakeFetch))
 })
 
@@ -104,7 +106,7 @@ describe('Lexi', () => {
     await user.click(screen.getByRole('button', { name: 'Look up' }))
     expect(await screen.findByRole('heading', { name: 'calm' })).toBeTruthy()
     expect(screen.getByText('Added to your history.')).toBeTruthy()
-    expect(stat('Total words').textContent).toContain('1')
+    expect(stat('Day streak').textContent).toContain('0')
     expect(stat('Not learned').textContent).toContain('1')
 
     // Review: mark it Learned.
@@ -122,9 +124,9 @@ describe('Lexi', () => {
     await user.click(screen.getByRole('button', { name: 'All words' }))
     expect(screen.getByRole('button', { name: /Start review \(1 word\)/ })).toBeTruthy()
 
-    // Back on Search: Not learned is 0, total is 1.
+    // Back on Search: Not learned is 0. One card is not enough for a streak day.
     await user.click(screen.getByRole('button', { name: 'Search' }))
-    expect(stat('Total words').textContent).toContain('1')
+    expect(stat('Day streak').textContent).toContain('0')
     expect(stat('Not learned').textContent).toContain('0')
 
     // Looking it up again: total stays 1, word goes back to Not learned.
@@ -133,11 +135,61 @@ describe('Lexi', () => {
     await user.type(input2, 'Calm')
     await user.click(screen.getByRole('button', { name: 'Look up' }))
     expect(await screen.findByText(/Moved back to Not learned/)).toBeTruthy()
-    expect(stat('Total words').textContent).toContain('1')
     expect(stat('Not learned').textContent).toContain('1')
 
     // History lists it once.
     await user.click(screen.getByRole('button', { name: 'History' }))
     expect(screen.getAllByText('calm')).toHaveLength(1)
+  })
+  it('five reviewed cards in a day make a streak, and the Streak screen shows it', async () => {
+    for (const w of ['alpha', 'bravo', 'charlie', 'delta', 'echo'])
+      await putWord({ word: w, status: 'not_learned', last_searched: Date.now(), meanings: [{ definition: `${w} meaning` }] })
+    const user = userEvent.setup()
+    render(<App />)
+
+    // Before reviewing: no streak, and the screen explains how to start one.
+    await user.click(await screen.findByRole('button', { name: /Streak: 0 days/ }))
+    expect(screen.getByRole('heading', { name: 'Streak' })).toBeTruthy()
+    expect(screen.getByText('Review 5 cards in a day to start your streak.')).toBeTruthy()
+    expect(screen.getByText('0 / 5')).toBeTruthy()
+    await user.click(screen.getByRole('button', { name: 'Start reviewing' }))
+
+    // The button leads straight to Review. Review all five cards.
+    await user.click(await screen.findByRole('button', { name: /Start review \(5 words\)/ }))
+    for (let i = 0; i < 5; i++) {
+      await user.click(await screen.findByRole('button', { name: 'Show the meaning' }))
+      await user.click(screen.getByRole('button', { name: /^Learned$/ }))
+    }
+    expect(await screen.findByText('Session complete')).toBeTruthy()
+
+    // Back on Search the chip shows 1 day, and the screen says the goal is reached.
+    await user.click(screen.getByRole('button', { name: 'Back to review' }))
+    await user.click(screen.getByRole('button', { name: 'Search' }))
+    await user.click(await screen.findByRole('button', { name: /Streak: 1 day\./ }))
+    expect(screen.getByText('5 / 5')).toBeTruthy()
+    expect(screen.getByText(/You reached today’s goal/)).toBeTruthy()
+
+    // The close button returns to Search.
+    await user.click(screen.getByRole('button', { name: 'Close' }))
+    expect(screen.getByLabelText('Look up an English word')).toBeTruthy()
+  })
+
+  it('four reviewed cards are not enough: the goal shows what is left', async () => {
+    for (const w of ['alpha', 'bravo', 'charlie', 'delta'])
+      await putWord({ word: w, status: 'not_learned', last_searched: Date.now(), meanings: [{ definition: `${w} meaning` }] })
+    const user = userEvent.setup()
+    render(<App />)
+    await user.click(await screen.findByRole('button', { name: 'Review' }))
+    await user.click(await screen.findByRole('button', { name: /Start review \(4 words\)/ }))
+    for (let i = 0; i < 4; i++) {
+      await user.click(await screen.findByRole('button', { name: 'Show the meaning' }))
+      await user.click(screen.getByRole('button', { name: /^Learned$/ }))
+    }
+    await user.click(await screen.findByRole('button', { name: 'Back to review' }))
+    await user.click(screen.getByRole('button', { name: 'Search' }))
+    await user.click(await screen.findByRole('button', { name: /Streak: 0 days/ }))
+    expect(screen.getByText('4 / 5')).toBeTruthy()
+    expect(screen.getByText('Review 1 more card today to start your streak.')).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Review 1 more card' })).toBeTruthy()
   })
 })

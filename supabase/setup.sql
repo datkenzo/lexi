@@ -70,3 +70,57 @@ create policy "own words: remove" on public.words
 
 -- Nobody who is signed out can touch the table.
 revoke all on public.words from anon;
+
+-- 5. Review activity for the streak: one row per day, per person.
+--    `data` is { "by": { "<device>": cards reviewed } }. Devices add their counts together.
+create table if not exists public.activity (
+  user_id    uuid        not null default auth.uid() references auth.users (id) on delete cascade,
+  day        text        not null,           -- the day on the device, as YYYY-MM-DD
+  data       jsonb       not null,
+  updated_at bigint      not null,           -- time of the change on the device (ms)
+  synced_at  timestamptz not null default clock_timestamp(),  -- time the server received it
+  primary key (user_id, day)
+);
+
+create index if not exists activity_user_synced on public.activity (user_id, synced_at);
+
+create or replace function public.activity_stamp()
+returns trigger
+language plpgsql
+as $$
+begin
+  new.synced_at := clock_timestamp();
+  return new;
+end;
+$$;
+
+drop trigger if exists activity_stamp on public.activity;
+create trigger activity_stamp
+  before insert or update on public.activity
+  for each row execute function public.activity_stamp();
+
+alter table public.activity enable row level security;
+
+drop policy if exists "own activity: read"   on public.activity;
+drop policy if exists "own activity: add"    on public.activity;
+drop policy if exists "own activity: change" on public.activity;
+drop policy if exists "own activity: remove" on public.activity;
+
+create policy "own activity: read" on public.activity
+  for select to authenticated
+  using (user_id = auth.uid() and public.lexi_allowed());
+
+create policy "own activity: add" on public.activity
+  for insert to authenticated
+  with check (user_id = auth.uid() and public.lexi_allowed());
+
+create policy "own activity: change" on public.activity
+  for update to authenticated
+  using (user_id = auth.uid() and public.lexi_allowed())
+  with check (user_id = auth.uid() and public.lexi_allowed());
+
+create policy "own activity: remove" on public.activity
+  for delete to authenticated
+  using (user_id = auth.uid() and public.lexi_allowed());
+
+revoke all on public.activity from anon;

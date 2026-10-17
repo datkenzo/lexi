@@ -122,3 +122,13 @@ After you have signed in once, open Supabase > **Authentication** > **Sign In / 
 - If the same word changed on two devices, the most recent change wins.
 - Removing a word removes it on your other devices too.
 - Signing out keeps the words on that device.
+
+## Streak sync (added later)
+
+The streak needs one more table. If you set up sync before the streak existed, open **Supabase > SQL Editor**, paste all of `supabase/setup.sql` again and press **Run**. It is safe to run twice.
+
+Until you do, Lexi still works and your words still sync. The streak is counted on each device separately.
+
+- A day counts when you review at least 5 cards that day.
+- Each device keeps its own count for the day, and the counts are added together when devices sync, so reviewing offline on two devices does not lose cards.
+- Streaks begin from the day this version is installed. Older words carry no review history.

@@ -2,9 +2,12 @@ import { useEffect, useState } from 'react'
 import WordCard from './WordCard.jsx'
 import Icon from './Icon.jsx'
 import Avatar from './Avatar.jsx'
+import Flame from './Flame.jsx'
 
 export default function SearchTab({
   stats,
+  streak,
+  onOpenStreak,
   current,
   loading,
   error,
@@ -40,13 +43,18 @@ export default function SearchTab({
       <header className={`topbar ${user ? 'has-avatar' : ''}`}>
         <h1 className="brand">Lexi</h1>
         <section className="stat-chips" aria-label="Your progress">
-          <div className="stat-chip" title="Total words">
-            <Icon name="book" size={24} />
+          <button
+            type="button"
+            className="stat-chip stat-chip-link"
+            onClick={onOpenStreak}
+            aria-label={`Streak: ${streak.current} ${streak.current === 1 ? 'day' : 'days'}. Open streak`}
+          >
+            <Flame size={24} active={streak.todayDone} />
             <div className="stat-text">
-              <span className="stat-value">{stats.total}</span>
-              <span className="stat-label">Total words</span>
+              <span className="stat-value">{streak.current}</span>
+              <span className="stat-label">Day streak</span>
             </div>
-          </div>
+          </button>
           <div className="stat-chip" title="Not learned">
             <Icon name="target" size={24} />
             <div className="stat-text">

@@ -31,6 +31,15 @@ export function toRow(rec, userId) {
   }
 }
 
+// Streak days: the row keeps the per-device counts in `data.by`.
+export function activityToRow(rec, userId) {
+  return { user_id: userId, day: rec.day, data: { by: rec.by }, updated_at: rec.updated_at ?? 0 }
+}
+
+export function activityFromRow(row) {
+  return { day: row.day, by: row.data?.by ?? {} }
+}
+
 export function fromRow(row) {
   const updated_at = Number(row.updated_at)
   if (row.deleted) return { word: row.word, deleted: true, updated_at }
