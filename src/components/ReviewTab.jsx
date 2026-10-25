@@ -119,9 +119,14 @@ export default function ReviewTab({ words, onSetStatus, onFocusMode, onCardRevie
                 )}
                 <p className="hint label-caps">Tap to flip</p>
               </div>
-              <div className="face back" aria-hidden={!flipped}>
+              <div className={`face back ${card.vi ? 'has-vi' : ''}`} aria-hidden={!flipped}>
                 {first?.pos && <p className="label-caps">{first.pos}</p>}
-                <p className="flash-meaning">{first?.definition}</p>
+                {card.vi && (
+                  <p className="flash-vi" lang="vi">
+                    {card.vi}
+                  </p>
+                )}
+                <p className={`flash-meaning ${card.vi ? 'sub' : ''}`}>{first?.definition}</p>
                 {example && <p className="example">“{example}”</p>}
                 {card.my_sentence && (
                   <div className="my-line">

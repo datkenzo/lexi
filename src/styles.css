@@ -779,6 +779,42 @@ textarea::placeholder {
   color: var(--muted);
 }
 
+/* ---------- Vietnamese meaning ---------- */
+.vi {
+  margin-top: var(--s4);
+  padding: var(--s3) var(--s4);
+  background: var(--blue-tint);
+  border: 2px solid var(--blue-line);
+  border-radius: var(--radius-sm);
+}
+.vi .label-caps {
+  color: var(--blue-ink);
+}
+.vi-text {
+  margin-top: 2px;
+  font-size: 24px;
+  line-height: 1.3;
+  font-weight: 900;
+  color: var(--blue-ink);
+  overflow-wrap: anywhere;
+}
+/* Translating or not available: quiet grey box. */
+.vi-quiet {
+  background: var(--surface-2);
+  border-color: var(--line);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--s2);
+}
+.vi-quiet .label-caps,
+.vi-note {
+  color: var(--muted);
+}
+.vi-note {
+  font-weight: 700;
+}
+
 /* ---------- History ---------- */
 .history {
   list-style: none;
@@ -980,6 +1016,22 @@ textarea::placeholder {
   font-size: 21px;
   font-weight: 700;
   line-height: 1.4;
+}
+
+/* Flashcard back with a Vietnamese meaning: Vietnamese first, English smaller below. */
+.back.has-vi {
+  gap: var(--s3);
+}
+.flash-vi {
+  font-size: 34px;
+  line-height: 1.2;
+  font-weight: 900;
+  color: var(--blue-ink);
+  overflow-wrap: anywhere;
+}
+.flash-meaning.sub {
+  font-size: 17px;
+  color: var(--muted);
 }
 
 .hint {

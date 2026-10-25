@@ -20,9 +20,12 @@ const calm = [
   },
 ]
 
+let myMemory = { responseStatus: 200, responseData: { translatedText: 'bình tĩnh' } }
+
 function fakeFetch(url) {
   const u = String(url)
   const json = { headers: { 'content-type': 'application/json' } }
+  if (u.includes('mymemory')) return Promise.resolve(new Response(JSON.stringify(myMemory), json))
   if (u.includes('/dictionary/calm')) return Promise.resolve(new Response(JSON.stringify(calm), json))
   if (u.includes('/dictionary/')) return Promise.resolve(new Response('{}', { status: 404, ...json }))
   if (u.includes('wiktionary')) return Promise.resolve(new Response('{}', { status: 404, ...json }))
@@ -34,6 +37,7 @@ const stat = (label) =>
   within(screen.getByLabelText('Your progress')).getByText(label).parentElement
 
 beforeEach(async () => {
+  myMemory = { responseStatus: 200, responseData: { translatedText: 'bình tĩnh' } }
   // Empty the word list and the streak so every test starts fresh.
   for (const w of await getAll()) await deleteWord(w.word)
   await (await openDB('lexi', 2)).clear('activity')
@@ -172,6 +176,51 @@ describe('Lexi', () => {
     // The close button returns to Search.
     await user.click(screen.getByRole('button', { name: 'Close' }))
     expect(screen.getByLabelText('Look up an English word')).toBeTruthy()
+  })
+
+  it('shows the Vietnamese meaning after a lookup and saves it with the word', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+    await user.type(await screen.findByLabelText('Look up an English word'), 'calm')
+    await user.click(screen.getByRole('button', { name: 'Look up' }))
+    expect(await screen.findByText('bình tĩnh')).toBeTruthy()
+    expect(screen.getByText('Vietnamese')).toBeTruthy()
+    expect(screen.getByText(/Vietnamese from MyMemory/)).toBeTruthy()
+    expect((await getAll()).find((w) => w.word === 'calm').vi).toBe('bình tĩnh')
+  })
+
+  it('says the Vietnamese meaning is not available and retries with Try again', async () => {
+    myMemory = { responseStatus: 429, responseData: { translatedText: '' } }
+    const user = userEvent.setup()
+    render(<App />)
+    await user.type(await screen.findByLabelText('Look up an English word'), 'calm')
+    await user.click(screen.getByRole('button', { name: 'Look up' }))
+    expect(await screen.findByText(/Could not get the Vietnamese meaning/)).toBeTruthy()
+    // The English definition still shows.
+    expect(screen.getByText('not excited or angry')).toBeTruthy()
+
+    myMemory = { responseStatus: 200, responseData: { translatedText: 'điềm tĩnh' } }
+    await user.click(screen.getByRole('button', { name: 'Try again' }))
+    expect(await screen.findByText('điềm tĩnh')).toBeTruthy()
+    expect(screen.queryByText(/Could not get the Vietnamese meaning/)).toBeNull()
+  })
+
+  it('translates an older saved word when it is opened from History, and the flashcard back shows Vietnamese first', async () => {
+    await putWord({ word: 'brave', status: 'not_learned', last_searched: Date.now(), meanings: [{ pos: 'adjective', definition: 'ready to face danger' }] })
+    myMemory = { responseStatus: 200, responseData: { translatedText: 'dũng cảm' } }
+    const user = userEvent.setup()
+    render(<App />)
+    await user.click(await screen.findByRole('button', { name: 'History' }))
+    await user.click(await screen.findByText('brave'))
+    expect(await screen.findByText('dũng cảm')).toBeTruthy()
+
+    await user.click(screen.getByRole('button', { name: 'Review' }))
+    await user.click(await screen.findByRole('button', { name: /Start review \(1 word\)/ }))
+    await user.click(screen.getByRole('button', { name: 'Show the meaning' }))
+    const vi = screen.getByText('dũng cảm')
+    const en = screen.getByText('ready to face danger')
+    // Vietnamese comes before the English definition on the back of the card.
+    expect(vi.compareDocumentPosition(en) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
   })
 
   it('four reviewed cards are not enough: the goal shows what is left', async () => {

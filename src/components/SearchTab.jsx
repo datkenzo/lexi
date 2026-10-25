@@ -12,6 +12,8 @@ export default function SearchTab({
   loading,
   error,
   onLookup,
+  translation,
+  onRetryTranslate,
   onSaveSentence,
   onRemove,
   user,
@@ -97,6 +99,8 @@ export default function SearchTab({
         <WordCard
           record={current.record}
           notice={current.notice}
+          translation={translation}
+          onRetryTranslate={onRetryTranslate}
           onSaveSentence={onSaveSentence}
           onRemove={onRemove}
         />

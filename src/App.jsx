@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { applyLookup, getStats, normalizeWord, STATUS } from './lib/words.js'
 import { fetchEntry, suggestSpellings } from './lib/dictionary.js'
+import { translateWord } from './lib/translate.js'
 import { deleteWord, getActivity, getAll, getWord, onLocalChange, putWord, recordCard } from './lib/db.js'
 import { computeStreak, dayKey } from './lib/streak.js'
 import { deviceId } from './lib/device.js'
@@ -36,6 +37,7 @@ export default function App() {
   const [showStreak, setShowStreak] = useState(false)
   const [activity, setActivity] = useState([])
   const [today, setToday] = useState(dayKey())
+  const [translation, setTranslation] = useState(null) // { word, status: 'loading' | 'error' }
 
   const stats = useMemo(() => getStats(words), [words])
   const streak = useMemo(() => computeStreak(activity, today), [activity, today])
@@ -157,6 +159,25 @@ export default function App() {
     })
   }, [])
 
+  // The Vietnamese meaning is fetched once per word and saved with it.
+  const translate = useCallback(
+    async (word) => {
+      setTranslation({ word, status: 'loading' })
+      try {
+        const vi = await translateWord(word)
+        const record = await getWord(word)
+        if (!record) return setTranslation((t) => (t?.word === word ? null : t))
+        const next = await putWord({ ...record, vi })
+        upsert(next)
+        setCurrent((c) => (c && c.record.word === word ? { ...c, record: next } : c))
+        setTranslation((t) => (t?.word === word ? null : t))
+      } catch {
+        setTranslation((t) => (t?.word === word || !t ? { word, status: 'error' } : t))
+      }
+    },
+    [upsert],
+  )
+
   const lookup = useCallback(
     async (raw) => {
       const word = normalizeWord(raw)
@@ -183,6 +204,7 @@ export default function App() {
           notice = 'Already in your history. Moved back to Not learned. Total unchanged.'
         else notice = 'Already in your history. Total unchanged.'
         setCurrent({ record: saved, notice })
+        if (!saved.vi) translate(word)
       } catch (e) {
         setCurrent(null)
         const failure = {
@@ -202,14 +224,18 @@ export default function App() {
         setLoading(false)
       }
     },
-    [upsert],
+    [upsert, translate],
   )
 
-  const openSaved = useCallback((record) => {
-    setError(null)
-    setCurrent({ record, notice: null })
-    setTab('search')
-  }, [])
+  const openSaved = useCallback(
+    (record) => {
+      setError(null)
+      setCurrent({ record, notice: null })
+      setTab('search')
+      if (!record.vi) translate(record.word)
+    },
+    [translate],
+  )
 
   const saveSentence = useCallback(
     async (word, text) => {
@@ -272,6 +298,8 @@ export default function App() {
                 loading={loading}
                 error={error}
                 onLookup={lookup}
+                translation={translation}
+                onRetryTranslate={translate}
                 onSaveSentence={saveSentence}
                 onRemove={remove}
                 user={session?.user}

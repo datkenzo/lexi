@@ -18,7 +18,7 @@ const SOURCE_NAMES = {
   wiktionary: 'Wiktionary',
 }
 
-export default function WordCard({ record, notice, onSaveSentence, onRemove }) {
+export default function WordCard({ record, notice, translation, onRetryTranslate, onSaveSentence, onRemove }) {
   const [showAll, setShowAll] = useState(false)
   const [draft, setDraft] = useState(record.my_sentence ?? '')
   const [showExamples, setShowExamples] = useState(false)
@@ -42,6 +42,7 @@ export default function WordCard({ record, notice, onSaveSentence, onRemove }) {
   }
 
   const isNewNotice = notice?.startsWith('Added')
+  const state = translation?.word === record.word ? translation.status : null
 
   return (
     <article className="stack-tight">
@@ -67,6 +68,27 @@ export default function WordCard({ record, notice, onSaveSentence, onRemove }) {
             </div>
           </div>
         </div>
+
+        {record.vi ? (
+          <div className="vi">
+            <p className="label-caps">Vietnamese</p>
+            <p className="vi-text" lang="vi">{record.vi}</p>
+          </div>
+        ) : state === 'loading' ? (
+          <div className="vi vi-quiet" role="status">
+            <p className="label-caps">Vietnamese</p>
+            <p className="vi-note">Translating…</p>
+          </div>
+        ) : state === 'error' ? (
+          <div className="vi vi-quiet">
+            <p className="label-caps">Vietnamese</p>
+            <p className="vi-note small">Could not get the Vietnamese meaning. The English definitions below still work.</p>
+            <button type="button" className="btn btn-small" onClick={() => onRetryTranslate?.(record.word)}>
+              <Icon name="refresh" size={18} />
+              Try again
+            </button>
+          </div>
+        ) : null}
 
         <ol className="meanings">
           {visible.map((m, i) => (
@@ -136,7 +158,10 @@ export default function WordCard({ record, notice, onSaveSentence, onRemove }) {
         </div>
 
         {record.source && SOURCE_NAMES[record.source] && (
-          <p className="source-note">Definitions from {SOURCE_NAMES[record.source]}</p>
+          <p className="source-note">
+            Definitions from {SOURCE_NAMES[record.source]}
+            {record.vi && ' · Vietnamese from MyMemory'}
+          </p>
         )}
       </div>
 
